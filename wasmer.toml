@@ -1,0 +1,12 @@
+[package]
+name = "mealplanner"
+version = "0.1.0"
+description = "Meal Planner PHP App"
+
+[fs]
+public = "."
+
+[[command]]
+name = "php"
+module = "php/php"
+runner = "wasi"
