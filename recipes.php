@@ -163,11 +163,22 @@ if (isset($_GET['import_api'])) {
                 
                 $pdo->beginTransaction();
                 
-                // Check if columns exist
-                $stmt = $pdo->query("SHOW COLUMNS FROM recipes LIKE 'category'");
+                // Check if category column exists (PostgreSQL)
+                $stmt = $pdo->prepare("
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'recipes' AND column_name = 'category'
+                ");
+                $stmt->execute();
                 $category_exists = $stmt->fetch();
-                
-                $stmt = $pdo->query("SHOW COLUMNS FROM recipes LIKE 'difficulty'");
+
+                // Check if difficulty column exists (PostgreSQL)
+                $stmt = $pdo->prepare("
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'recipes' AND column_name = 'difficulty'
+                ");
+                $stmt->execute();
                 $difficulty_exists = $stmt->fetch();
                 
                 $stmt = $pdo->query("SHOW COLUMNS FROM recipes LIKE 'image_url'");
