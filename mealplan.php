@@ -26,7 +26,14 @@ $stmt = $pdo->prepare("SELECT mp.*, r.title as recipe_title, r.prep_time, r.cook
                       FROM meal_plans mp 
                       LEFT JOIN recipes r ON mp.recipe_id = r.id 
                       WHERE mp.user_id = ? AND mp.date BETWEEN ? AND ? 
-                      ORDER BY mp.date, FIELD(mp.meal_type, 'breakfast', 'lunch', 'dinner', 'snack')");
+                      ORDER BY mp.date, 
+                               CASE mp.meal_type 
+                                   WHEN 'breakfast' THEN 1 
+                                   WHEN 'lunch' THEN 2 
+                                   WHEN 'dinner' THEN 3 
+                                   WHEN 'snack' THEN 4 
+                                   ELSE 5 
+                               END");
 $stmt->execute([$user_id, $week_dates[0], $week_dates[6]]);
 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
