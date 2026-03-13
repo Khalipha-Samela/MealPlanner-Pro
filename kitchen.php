@@ -117,12 +117,15 @@ if (!empty($category_filter)) {
 
 switch ($filter) {
     case 'expiring':
-        $sql .= " AND expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY) 
-                 AND expiration_date >= CURRENT_DATE";
+         $sql .= " AND expiration_date IS NOT NULL 
+              AND expiration_date <= CURRENT_DATE + INTERVAL '7 days'
+              AND expiration_date >= CURRENT_DATE";
         break;
     case 'expired':
-        $sql .= " AND expiration_date IS NOT NULL AND expiration_date < CURRENT_DATE";
+        $sql .= " AND expiration_date IS NOT NULL
+                  AND expiration_date < CURRENT_DATE";
         break;
+
     case 'no_date':
         $sql .= " AND expiration_date IS NULL";
         break;
