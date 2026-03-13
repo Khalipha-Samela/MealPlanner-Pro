@@ -67,7 +67,7 @@ $today_meals = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </button>
             <div class="mobile-logo">
                 <i class="fas fa-utensils"></i>
-                <span>Plan A Plate</span>
+                <span>MealPlanner Pro</span>
             </div>
             <button class="notifications-toggle" aria-label="Notifications">
                 <i class="far fa-bell"></i>
