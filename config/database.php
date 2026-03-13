@@ -1,7 +1,7 @@
 <?php
 
 $host = "aws-1-eu-west-1.pooler.supabase.com";
-$port = "6543";
+$port = "5432";
 $dbname = "postgres";
 $username = "postgres.xhfrlzamhwntvlvlhzpm";
 $password = "Qu74pqPtLRf,Wa@";
