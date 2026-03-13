@@ -181,7 +181,13 @@ if (isset($_GET['import_api'])) {
                 $stmt->execute();
                 $difficulty_exists = $stmt->fetch();
                 
-                $stmt = $pdo->query("SHOW COLUMNS FROM recipes LIKE 'image_url'");
+                $stmt = $pdo->prepare("
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'recipes' 
+                    AND column_name = 'image_url'
+                ");
+                $stmt->execute();
                 $image_exists = $stmt->fetch();
                 
                 // Build query dynamically
