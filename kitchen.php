@@ -137,7 +137,7 @@ if (!empty($search)) {
 $sql .= " ORDER BY 
     CASE 
         WHEN expiration_date IS NULL THEN 2 
-        WHEN expiration_date < CURDATE() THEN 3
+        WHEN expiration_date < CURRENT_DATE THEN 3
         ELSE 1 
     END,
     expiration_date ASC,
@@ -150,9 +150,9 @@ $ingredients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get ingredient counts and stats
 $stmt = $pdo->prepare("SELECT 
     COUNT(*) as total,
-    COUNT(CASE WHEN expiration_date IS NOT NULL AND expiration_date < CURDATE() THEN 1 END) as expired,
-    COUNT(CASE WHEN expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) 
-          AND expiration_date >= CURDATE() THEN 1 END) as expiring_soon,
+    COUNT(CASE WHEN expiration_date IS NOT NULL AND expiration_date < CURRENT_DATE THEN 1 END) as expired,
+    COUNT(CASE WHEN expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY) 
+          AND expiration_date >= CURRENT_DATE THEN 1 END) as expiring_soon,
     COUNT(CASE WHEN expiration_date IS NULL THEN 1 END) as no_date
     FROM ingredients WHERE user_id = ?");
 $stmt->execute([$user_id]);
