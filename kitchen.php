@@ -117,11 +117,11 @@ if (!empty($category_filter)) {
 
 switch ($filter) {
     case 'expiring':
-        $sql .= " AND expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) 
-                 AND expiration_date >= CURDATE()";
+        $sql .= " AND expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY) 
+                 AND expiration_date >= CURRENT_DATE";
         break;
     case 'expired':
-        $sql .= " AND expiration_date IS NOT NULL AND expiration_date < CURDATE()";
+        $sql .= " AND expiration_date IS NOT NULL AND expiration_date < CURRENT_DATE";
         break;
     case 'no_date':
         $sql .= " AND expiration_date IS NULL";
@@ -151,8 +151,11 @@ $ingredients = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt = $pdo->prepare("SELECT 
     COUNT(*) as total,
     COUNT(CASE WHEN expiration_date IS NOT NULL AND expiration_date < CURRENT_DATE THEN 1 END) as expired,
-    COUNT(CASE WHEN expiration_date IS NOT NULL AND expiration_date <= DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY) 
-          AND expiration_date >= CURRENT_DATE THEN 1 END) as expiring_soon,
+    COUNT(CASE 
+        WHEN expiration_date IS NOT NULL 
+        AND expiration_date <= CURRENT_DATE + INTERVAL '7 days'
+        AND expiration_date >= CURRENT_DATE 
+    THEN 1 END) as expiring_soon,
     COUNT(CASE WHEN expiration_date IS NULL THEN 1 END) as no_date
     FROM ingredients WHERE user_id = ?");
 $stmt->execute([$user_id]);
