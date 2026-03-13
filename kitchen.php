@@ -155,7 +155,7 @@ $stmt = $pdo->prepare("SELECT
         WHEN expiration_date IS NOT NULL 
         AND expiration_date <= CURRENT_DATE + INTERVAL '7 days'
         AND expiration_date >= CURRENT_DATE 
-    THEN 1 END),
+    THEN 1 END) as expiring_soon,
     COUNT(CASE WHEN expiration_date IS NULL THEN 1 END) as no_date
     FROM ingredients WHERE user_id = ?");
 $stmt->execute([$user_id]);
