@@ -4,8 +4,18 @@ let currentPreviewRecipeId = null;
 const recipeAPI = new RecipeAPI();
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing...');
     initializeEventListeners();
     initializeKeyboardShortcuts();
+    
+    // Check for message from redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get('message');
+    if (message) {
+        showNotification(decodeURIComponent(message), 'success');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
 });
 
 function initializeEventListeners() {
@@ -15,6 +25,7 @@ function initializeEventListeners() {
         modals.forEach(modal => {
             if (event.target === modal) {
                 modal.style.display = 'none';
+                document.body.style.overflow = '';
             }
         });
     });
@@ -66,29 +77,36 @@ function initializeKeyboardShortcuts() {
             document.querySelectorAll('.modal').forEach(modal => {
                 modal.style.display = 'none';
             });
+            document.body.style.overflow = '';
         }
     });
 }
 
 // Recipe CRUD Operations
 function showAddRecipeModal() {
+    console.log('Showing add recipe modal');
     const modal = document.getElementById('addRecipeModal');
-    modal.style.display = 'block';
+    if (!modal) {
+        console.error('Add recipe modal not found');
+        return;
+    }
     
-    // Prevent body scrolling when modal is open
+    modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
     
     // Focus on first input
     setTimeout(() => {
-        document.getElementById('title').focus();
+        const titleInput = document.getElementById('title');
+        if (titleInput) titleInput.focus();
     }, 100);
 }
 
 function hideAddRecipeModal() {
+    console.log('Hiding add recipe modal');
     const modal = document.getElementById('addRecipeModal');
-    modal.style.display = 'none';
+    if (!modal) return;
     
-    // Restore body scrolling
+    modal.style.display = 'none';
     document.body.style.overflow = '';
     
     // Reset form
@@ -96,38 +114,44 @@ function hideAddRecipeModal() {
     if (form) form.reset();
     
     // Reset ingredients to just one row
+    resetIngredients();
+}
+
+function resetIngredients() {
     const container = document.getElementById('ingredients-container');
-    if (container) {
-        container.innerHTML = `
-            <div class="ingredient-row">
-                <div class="form-group">
-                    <input type="text" name="ingredient_name[]" 
-                           placeholder="Ingredient name (e.g., Chicken breast)" 
-                           required
-                           class="form-input">
-                </div>
-                <div class="form-group">
-                    <input type="text" name="ingredient_quantity[]" 
-                           placeholder="Quantity (e.g., 500g)"
-                           class="form-input">
-                </div>
-                <div class="form-group action-group">
-                    <button type="button" class="btn-icon delete" 
-                            onclick="removeIngredientField(this)" 
-                            disabled
-                            title="Remove ingredient">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="ingredient-row">
+            <div class="form-group">
+                <input type="text" name="ingredient_name[]" 
+                       placeholder="Ingredient name (e.g., Chicken breast)" 
+                       required
+                       class="form-input">
             </div>
-        `;
-    }
+            <div class="form-group">
+                <input type="text" name="ingredient_quantity[]" 
+                       placeholder="Quantity (e.g., 500g)"
+                       class="form-input">
+            </div>
+            <div class="form-group action-group">
+                <button type="button" class="btn-icon delete" 
+                        onclick="removeIngredientField(this)" 
+                        disabled
+                        title="Remove ingredient">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
     ingredientCount = 1;
 }
 
 function addIngredientField() {
     ingredientCount++;
     const container = document.getElementById('ingredients-container');
+    if (!container) return;
+    
     const newRow = document.createElement('div');
     newRow.className = 'ingredient-row';
     newRow.innerHTML = `
@@ -166,7 +190,9 @@ function addIngredientField() {
 
 function removeIngredientField(button) {
     const row = button.closest('.ingredient-row');
-    if (row && ingredientCount > 1) {
+    if (!row) return;
+    
+    if (ingredientCount > 1) {
         row.remove();
         ingredientCount--;
         
@@ -182,21 +208,30 @@ function removeIngredientField(button) {
 }
 
 async function viewRecipe(recipeId) {
+    console.log('Viewing recipe:', recipeId);
     const modal = document.getElementById('viewRecipeModal');
     const titleEl = document.getElementById('viewRecipeTitle');
     const contentEl = document.getElementById('viewRecipeContent');
     const addToPlanBtn = document.getElementById('addToPlanFromView');
     
-    if (!modal || !titleEl || !contentEl) return;
+    if (!modal || !titleEl || !contentEl) {
+        console.error('View modal elements not found');
+        return;
+    }
     
     // Show loading state
     titleEl.textContent = 'Loading...';
-    contentEl.innerHTML = '<div class="loading-spinner"></div><p style="text-align: center;">Loading recipe details...</p>';
+    contentEl.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading-spinner"></div><p style="margin-top: 20px;">Loading recipe details...</p></div>';
     modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
     
     try {
         // Fetch recipe details from server
         const response = await fetch(`api/get_recipe.php?id=${recipeId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (!data || !data.recipe) {
@@ -212,90 +247,95 @@ async function viewRecipe(recipeId) {
         // Calculate total time
         const totalTime = (parseInt(recipe.prep_time) || 0) + (parseInt(recipe.cook_time) || 0);
         
-        // Format instructions - split by newlines and filter empty lines
+        // Format instructions
         const instructions = recipe.instructions ? 
             recipe.instructions.split('\n').filter(step => step.trim() !== '') : [];
         
         // Build content
         let content = `
             <div class="recipe-view">
-                <div class="recipe-meta-view">
+                <div class="recipe-meta-view" style="display: flex; flex-wrap: wrap; gap: 10px; padding: 15px; background: var(--gray-50); border-radius: var(--radius-lg); margin-bottom: 20px;">
                     ${totalTime > 0 ? `
-                        <span class="meta-item">
-                            <i class="fas fa-clock"></i> Total: ${totalTime} min
-                            ${recipe.prep_time ? `<span class="meta-detail">(Prep: ${recipe.prep_time}m</span>` : ''}
-                            ${recipe.cook_time ? `<span class="meta-detail">${recipe.prep_time ? ', ' : '('}Cook: ${recipe.cook_time}m)</span>` : ''}
+                        <span class="meta-item" style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                            <i class="fas fa-clock" style="color: var(--primary);"></i> Total: ${totalTime} min
+                            ${recipe.prep_time ? `<span style="font-size: 0.8rem; color: var(--gray-500); margin-left: 4px;">(Prep: ${recipe.prep_time}m</span>` : ''}
+                            ${recipe.cook_time ? `<span style="font-size: 0.8rem; color: var(--gray-500);">${recipe.prep_time ? ', ' : '('}Cook: ${recipe.cook_time}m)</span>` : ''}
                         </span>
                     ` : ''}
                     ${recipe.servings ? `
-                        <span class="meta-item">
-                            <i class="fas fa-users"></i> Serves: ${recipe.servings}
+                        <span class="meta-item" style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                            <i class="fas fa-users" style="color: var(--primary);"></i> Serves: ${recipe.servings}
                         </span>
                     ` : ''}
                     ${recipe.category ? `
-                        <span class="meta-item">
-                            <i class="fas fa-tag"></i> ${recipe.category}
+                        <span class="meta-item" style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                            <i class="fas fa-tag" style="color: var(--primary);"></i> ${recipe.category}
                         </span>
                     ` : ''}
                     ${recipe.difficulty ? `
-                        <span class="meta-item">
-                            <i class="fas fa-signal"></i> ${recipe.difficulty}
+                        <span class="meta-item" style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                            <i class="fas fa-signal" style="color: var(--primary);"></i> ${recipe.difficulty}
                         </span>
                     ` : ''}
                 </div>
                 
                 ${recipe.image_url ? `
-                    <img src="${recipe.image_url}" alt="${escapeHtml(recipe.title)}" 
-                         class="recipe-view-image">
+                    <img src="${escapeHtml(recipe.image_url)}" alt="${escapeHtml(recipe.title)}" 
+                         style="width: 100%; max-height: 300px; object-fit: cover; border-radius: var(--radius-lg); margin-bottom: 20px;">
                 ` : ''}
                 
                 ${recipe.description ? `
-                    <div class="recipe-section">
-                        <h3>Description</h3>
-                        <div class="recipe-description-full">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: var(--gray-800);">Description</h3>
+                        <div style="background: var(--gray-50); padding: 15px; border-radius: var(--radius-lg); line-height: 1.6;">
                             ${nl2br(escapeHtml(recipe.description))}
                         </div>
                     </div>
                 ` : ''}
                 
-                <div class="recipe-section">
-                    <h3>Ingredients</h3>
-                    <ul class="ingredient-list">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: var(--gray-800);">Ingredients</h3>
+                    <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">
         `;
         
         // Add ingredients
         if (ingredients.length > 0) {
             ingredients.forEach(ing => {
                 content += `
-                    <li>
-                        ${ing.quantity ? `<strong>${escapeHtml(ing.quantity)}</strong> ` : ''}
+                    <li style="padding: 10px; background: var(--gray-50); border-radius: var(--radius); border: 1px solid var(--gray-200);">
+                        ${ing.quantity ? `<strong style="color: var(--primary-dark); margin-right: 5px;">${escapeHtml(ing.quantity)}</strong> ` : ''}
                         ${escapeHtml(ing.ingredient_name)}
                     </li>
                 `;
             });
         } else {
-            content += '<li>No ingredients listed</li>';
+            content += '<li style="padding: 10px; background: var(--gray-50); border-radius: var(--radius);">No ingredients listed</li>';
         }
         
         content += `
                     </ul>
                 </div>
                 
-                <div class="recipe-section">
-                    <h3>Instructions</h3>
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; color: var(--gray-800);">Instructions</h3>
         `;
         
         // Add instructions
         if (instructions.length > 0) {
-            content += '<ol class="instruction-list">';
+            content += '<ol style="list-style: none; padding: 0; counter-reset: instruction;">';
             instructions.forEach(step => {
                 if (step.trim()) {
-                    content += `<li>${escapeHtml(step)}</li>`;
+                    content += `
+                        <li style="counter-increment: instruction; padding: 15px 15px 15px 45px; position: relative; background: var(--gray-50); border-radius: var(--radius-lg); margin-bottom: 10px; line-height: 1.6;">
+                            <span style="position: absolute; left: 10px; top: 12px; width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 600;">${instructions.indexOf(step) + 1}</span>
+                            ${escapeHtml(step)}
+                        </li>
+                    `;
                 }
             });
             content += '</ol>';
         } else {
-            content += '<p>No instructions available.</p>';
+            content += '<p style="padding: 15px; background: var(--gray-50); border-radius: var(--radius-lg);">No instructions available.</p>';
         }
         
         content += `
@@ -308,13 +348,13 @@ async function viewRecipe(recipeId) {
     } catch (error) {
         console.error('Error loading recipe:', error);
         contentEl.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
+            <div style="text-align: center; padding: 40px;">
+                <div style="width: 80px; height: 80px; background: var(--danger-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--danger);"></i>
                 </div>
-                <h3>Failed to load recipe</h3>
-                <p>${error.message}</p>
-                <button class="btn btn-primary btn-sm" onclick="viewRecipe(${recipeId})">
+                <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px;">Failed to load recipe</h3>
+                <p style="color: var(--gray-500); margin-bottom: 20px;">${error.message}</p>
+                <button class="btn btn-primary" onclick="viewRecipe(${recipeId})">
                     Try Again
                 </button>
             </div>
@@ -338,26 +378,36 @@ function nl2br(text) {
 
 function hideViewRecipeModal() {
     const modal = document.getElementById('viewRecipeModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
 }
 
 function addToMealPlan(recipeId) {
-    // Redirect to meal plan page with recipe pre-selected
     window.location.href = `mealplan.php?add_recipe=${recipeId}`;
 }
 
 function editRecipe(recipeId) {
-    // Redirect to edit page (you'll need to create this)
     alert('Edit feature coming soon!');
-    // window.location.href = `edit_recipe.php?id=${recipeId}`;
 }
 
 // API Integration Functions
 function showAPISearchModal() {
+    console.log('Showing API search modal');
     const modal = document.getElementById('apiSearchModal');
+    if (!modal) {
+        console.error('API search modal not found');
+        return;
+    }
+    
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    
     const searchInput = document.getElementById('apiSearchQuery');
-    if (modal) modal.style.display = 'block';
-    if (searchInput) searchInput.focus();
+    if (searchInput) {
+        setTimeout(() => searchInput.focus(), 100);
+    }
     
     // Clear previous results
     const apiResults = document.getElementById('apiResults');
@@ -368,7 +418,10 @@ function showAPISearchModal() {
 
 function hideAPISearchModal() {
     const modal = document.getElementById('apiSearchModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
 }
 
 async function performAPISearch() {
@@ -384,7 +437,7 @@ async function performAPISearch() {
     
     if (!resultsDiv || !apiResults) return;
     
-    resultsDiv.innerHTML = '<div class="loading-spinner"></div><p>Searching...</p>';
+    resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading-spinner"></div><p style="margin-top: 10px;">Searching...</p></div>';
     apiResults.style.display = 'block';
     if (randomRecipes) randomRecipes.style.display = 'none';
     
@@ -392,7 +445,7 @@ async function performAPISearch() {
         const recipes = await recipeAPI.searchRecipes(query, { limit: 12 });
         
         if (recipes.length === 0) {
-            resultsDiv.innerHTML = '<p class="text-muted">No recipes found. Try a different search term.</p>';
+            resultsDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--gray-500);">No recipes found. Try a different search term.</p>';
             return;
         }
         
@@ -400,7 +453,7 @@ async function performAPISearch() {
         
     } catch (error) {
         console.error('Search error:', error);
-        resultsDiv.innerHTML = '<p class="text-danger">Error searching for recipes. Please try again.</p>';
+        resultsDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--danger);">Error searching for recipes. Please try again.</p>';
     }
 }
 
@@ -411,7 +464,7 @@ async function getRandomRecipes() {
     
     if (!randomDiv || !randomRecipes) return;
     
-    randomDiv.innerHTML = '<div class="loading-spinner"></div><p>Loading random recipes...</p>';
+    randomDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading-spinner"></div><p style="margin-top: 10px;">Loading random recipes...</p></div>';
     randomRecipes.style.display = 'block';
     if (apiResults) apiResults.style.display = 'none';
     
@@ -419,7 +472,7 @@ async function getRandomRecipes() {
         const recipes = await recipeAPI.getRandomRecipes(8);
         
         if (recipes.length === 0) {
-            randomDiv.innerHTML = '<p class="text-muted">Could not load random recipes. Please try again.</p>';
+            randomDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--gray-500);">Could not load random recipes. Please try again.</p>';
             return;
         }
         
@@ -427,7 +480,7 @@ async function getRandomRecipes() {
         
     } catch (error) {
         console.error('Random recipes error:', error);
-        randomDiv.innerHTML = '<p class="text-danger">Error loading random recipes. Please try again.</p>';
+        randomDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--danger);">Error loading random recipes. Please try again.</p>';
     }
 }
 
@@ -435,20 +488,20 @@ function displayAPIResults(recipes, container) {
     let content = '';
     recipes.forEach(recipe => {
         content += `
-            <div class="api-recipe-card">
-                <div class="api-recipe-header">
-                    <h4>${escapeHtml(recipe.title)}</h4>
-                    <span class="recipe-time">${recipe.readyInMinutes || '?'} min</span>
+            <div style="background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 15px; transition: all 0.2s ease; hover: transform: translateY(-2px); hover: box-shadow: var(--shadow-md);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="font-size: 1rem; font-weight: 600; margin: 0; flex: 1;">${escapeHtml(recipe.title)}</h4>
+                    <span style="background: var(--primary-bg); color: var(--primary-dark); padding: 4px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 500; white-space: nowrap;">${recipe.readyInMinutes || '?'} min</span>
                 </div>
                 ${recipe.image ? `
                     <img src="${recipe.image}" alt="${escapeHtml(recipe.title)}" 
-                         class="api-recipe-image">
+                         style="width: 100%; height: 140px; object-fit: cover; border-radius: var(--radius); margin: 10px 0;">
                 ` : ''}
-                <div class="api-recipe-footer">
-                    <button class="btn btn-outline btn-sm" onclick="previewAPIRecipe('${recipe.id}')">
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button class="btn btn-outline btn-sm" onclick="previewAPIRecipe('${recipe.id}')" style="flex: 1;">
                         <i class="fas fa-eye"></i> Preview
                     </button>
-                    <button class="btn btn-primary btn-sm" onclick="importAPIRecipe('${recipe.id}')">
+                    <button class="btn btn-primary btn-sm" onclick="importAPIRecipe('${recipe.id}')" style="flex: 1;">
                         <i class="fas fa-download"></i> Import
                     </button>
                 </div>
@@ -460,17 +513,22 @@ function displayAPIResults(recipes, container) {
 }
 
 async function previewAPIRecipe(recipeId) {
+    console.log('Previewing API recipe:', recipeId);
     currentPreviewRecipeId = recipeId;
     
     const previewContent = document.getElementById('apiPreviewContent');
     const previewTitle = document.getElementById('apiPreviewTitle');
     const previewModal = document.getElementById('apiPreviewModal');
     
-    if (!previewContent || !previewTitle || !previewModal) return;
+    if (!previewContent || !previewTitle || !previewModal) {
+        console.error('Preview modal elements not found');
+        return;
+    }
     
     previewTitle.textContent = 'Loading...';
-    previewContent.innerHTML = '<div class="loading-spinner"></div><p style="text-align: center;">Loading recipe details...</p>';
+    previewContent.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading-spinner"></div><p style="margin-top: 20px;">Loading recipe details...</p></div>';
     previewModal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
     
     try {
         const recipe = await recipeAPI.getRecipeDetails(recipeId);
@@ -482,13 +540,13 @@ async function previewAPIRecipe(recipeId) {
         
         let ingredientsHtml = '';
         if (recipe.ingredients && recipe.ingredients.length > 0) {
-            ingredientsHtml = '<ul class="ingredient-list">';
+            ingredientsHtml = '<ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">';
             recipe.ingredients.forEach(ing => {
-                ingredientsHtml += `<li><strong>${escapeHtml(ing.quantity || '')}</strong> ${escapeHtml(ing.name)}</li>`;
+                ingredientsHtml += `<li style="padding: 10px; background: var(--gray-50); border-radius: var(--radius); border: 1px solid var(--gray-200);"><strong style="color: var(--primary-dark); margin-right: 5px;">${escapeHtml(ing.quantity || '')}</strong> ${escapeHtml(ing.name)}</li>`;
             });
             ingredientsHtml += '</ul>';
         } else {
-            ingredientsHtml = '<p>No ingredients listed</p>';
+            ingredientsHtml = '<p style="padding: 15px; background: var(--gray-50); border-radius: var(--radius);">No ingredients listed</p>';
         }
         
         // Format instructions
@@ -496,59 +554,64 @@ async function previewAPIRecipe(recipeId) {
         if (recipe.instructions) {
             const instructions = recipe.instructions.split('\n').filter(step => step.trim());
             if (instructions.length > 0) {
-                instructionsHtml = '<ol class="instruction-list">';
+                instructionsHtml = '<ol style="list-style: none; padding: 0; counter-reset: instruction;">';
                 instructions.forEach(step => {
                     if (step.trim()) {
-                        instructionsHtml += `<li>${escapeHtml(step)}</li>`;
+                        instructionsHtml += `
+                            <li style="counter-increment: instruction; padding: 15px 15px 15px 45px; position: relative; background: var(--gray-50); border-radius: var(--radius-lg); margin-bottom: 10px; line-height: 1.6;">
+                                <span style="position: absolute; left: 10px; top: 12px; width: 28px; height: 28px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 600;">${instructions.indexOf(step) + 1}</span>
+                                ${escapeHtml(step)}
+                            </li>
+                        `;
                     }
                 });
                 instructionsHtml += '</ol>';
             } else {
-                instructionsHtml = '<p>No instructions available.</p>';
+                instructionsHtml = '<p style="padding: 15px; background: var(--gray-50); border-radius: var(--radius);">No instructions available.</p>';
             }
         } else {
-            instructionsHtml = '<p>No instructions available.</p>';
+            instructionsHtml = '<p style="padding: 15px; background: var(--gray-50); border-radius: var(--radius);">No instructions available.</p>';
         }
         
         const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
         
         const content = `
             <div class="recipe-view">
-                <div class="recipe-meta-view">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 15px; background: var(--gray-50); border-radius: var(--radius-lg); margin-bottom: 20px;">
                     ${totalTime > 0 ? `
-                        <span class="meta-item">
-                            <i class="fas fa-clock"></i> Total: ${totalTime} min
+                        <span style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                            <i class="fas fa-clock" style="color: var(--primary);"></i> Total: ${totalTime} min
                         </span>
                     ` : ''}
                     ${recipe.servings ? `
-                        <span class="meta-item">
-                            <i class="fas fa-users"></i> Serves: ${recipe.servings}
+                        <span style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                            <i class="fas fa-users" style="color: var(--primary);"></i> Serves: ${recipe.servings}
                         </span>
                     ` : ''}
-                    <span class="meta-item">
-                        <i class="fas fa-globe"></i> TheMealDB
+                    <span style="display: flex; align-items: center; gap: 8px; background: white; padding: 8px 12px; border-radius: var(--radius); box-shadow: var(--shadow-sm);">
+                        <i class="fas fa-globe" style="color: var(--primary);"></i> TheMealDB
                     </span>
                 </div>
                 
                 ${recipe.image ? `
                     <img src="${recipe.image}" alt="${escapeHtml(recipe.title)}" 
-                         class="recipe-view-image">
+                         style="width: 100%; max-height: 300px; object-fit: cover; border-radius: var(--radius-lg); margin-bottom: 20px;">
                 ` : ''}
                 
-                <div class="recipe-section">
-                    <h3>Ingredients</h3>
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px;">Ingredients</h3>
                     ${ingredientsHtml}
                 </div>
                 
-                <div class="recipe-section">
-                    <h3>Instructions</h3>
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px;">Instructions</h3>
                     ${instructionsHtml}
                 </div>
                 
                 ${recipe.description ? `
-                    <div class="recipe-section">
-                        <h3>Description</h3>
-                        <div class="recipe-description-full">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px;">Description</h3>
+                        <div style="background: var(--gray-50); padding: 15px; border-radius: var(--radius-lg);">
                             ${escapeHtml(recipe.description)}
                         </div>
                     </div>
@@ -561,13 +624,13 @@ async function previewAPIRecipe(recipeId) {
     } catch (error) {
         console.error('Preview error:', error);
         previewContent.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
+            <div style="text-align: center; padding: 40px;">
+                <div style="width: 80px; height: 80px; background: var(--danger-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--danger);"></i>
                 </div>
-                <h3>Failed to load recipe</h3>
-                <p>${error.message}</p>
-                <button class="btn btn-primary btn-sm" onclick="previewAPIRecipe('${recipeId}')">
+                <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 10px;">Failed to load recipe</h3>
+                <p style="color: var(--gray-500); margin-bottom: 20px;">${error.message}</p>
+                <button class="btn btn-primary" onclick="previewAPIRecipe('${recipeId}')">
                     Try Again
                 </button>
             </div>
@@ -577,7 +640,10 @@ async function previewAPIRecipe(recipeId) {
 
 function hideAPIPreviewModal() {
     const modal = document.getElementById('apiPreviewModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
     currentPreviewRecipeId = null;
 }
 
