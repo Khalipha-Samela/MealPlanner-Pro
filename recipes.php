@@ -15,6 +15,7 @@ $error = '';
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_recipe'])) {
+
         $title = trim($_POST['title']);
         $description = trim($_POST['description']);
         $instructions = trim($_POST['instructions']);
@@ -23,75 +24,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $servings = $_POST['servings'] ?: null;
         $category = $_POST['category'] ?? 'Other';
         $difficulty = $_POST['difficulty'] ?? 'Medium';
-        
+
         if (empty($title)) {
             $error = 'Recipe title is required';
         } else {
             try {
-                $pdo->beginTransaction();
-                
-                // Check if category column exists (PostgreSQL)
-                $stmt = $pdo->prepare("
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'recipes' AND column_name = 'category'
-                ");
-                $stmt->execute();
-                $category_exists = $stmt->fetch();
 
-                // Check if difficulty column exists (PostgreSQL)
-                $stmt = $pdo->prepare("
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'recipes' AND column_name = 'difficulty'
-                ");
-                $stmt->execute();
-                $difficulty_exists = $stmt->fetch();
-                
-                // Build query dynamically based on existing columns
-                $columns = ['user_id', 'title', 'description', 'instructions', 'prep_time', 'cook_time', 'servings'];
-                $placeholders = ['?', '?', '?', '?', '?', '?', '?'];
-                $values = [$user_id, $title, $description, $instructions, $prep_time, $cook_time, $servings];
-                
-                if ($category_exists) {
-                    $columns[] = 'category';
-                    $placeholders[] = '?';
-                    $values[] = $category;
-                }
-                
-                if ($difficulty_exists) {
-                    $columns[] = 'difficulty';
-                    $placeholders[] = '?';
-                    $values[] = $difficulty;
-                }
-                
-                $sql = "INSERT INTO recipes (" . implode(', ', $columns) . ") 
-                        VALUES (" . implode(', ', $placeholders) . ")";
-                
+                $pdo->beginTransaction();
+
+                $sql = "
+                INSERT INTO recipes 
+                (user_id, title, description, instructions, prep_time, cook_time, servings, category, difficulty) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
+                RETURNING id
+                ";
+
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute($values);
-                
-                $recipe_id = $pdo->lastInsertId();
-                
+                $stmt->execute([
+                    $user_id,
+                    $title,
+                    $description,
+                    $instructions,
+                    $prep_time,
+                    $cook_time,
+                    $servings,
+                    $category,
+                    $difficulty
+                ]);
+
+                $recipe_id = $stmt->fetchColumn();
+
                 // Insert ingredients
                 if (isset($_POST['ingredient_name']) && is_array($_POST['ingredient_name'])) {
+
                     foreach ($_POST['ingredient_name'] as $index => $name) {
+
                         $name = trim($name);
                         $quantity = trim($_POST['ingredient_quantity'][$index] ?? '');
-                        
+
                         if (!empty($name)) {
-                            $stmt = $pdo->prepare("INSERT INTO recipe_ingredients (recipe_id, ingredient_name, quantity) 
-                                                  VALUES (?, ?, ?)");
-                            $stmt->execute([$recipe_id, $name, $quantity]);
+
+                            $stmt = $pdo->prepare("
+                            INSERT INTO recipe_ingredients 
+                            (recipe_id, ingredient_name, quantity)
+                            VALUES (?, ?, ?)
+                            ");
+
+                            $stmt->execute([
+                                $recipe_id,
+                                $name,
+                                $quantity
+                            ]);
                         }
                     }
                 }
-                
+
                 $pdo->commit();
-                $message = 'Recipe added successfully!';
+
+                $message = "Recipe added successfully!";
+
             } catch(PDOException $e) {
+
                 $pdo->rollBack();
-                $error = 'Failed to add recipe: ' . $e->getMessage();
+
+                $error = "Failed to add recipe: " . $e->getMessage();
             }
         }
     }
