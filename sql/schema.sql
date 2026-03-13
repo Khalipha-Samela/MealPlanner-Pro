@@ -1,10 +1,6 @@
--- Create database
-CREATE DATABASE IF NOT EXISTS mealplanner;
-USE mealplanner;
-
--- Users table
+-- Users
 CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -12,22 +8,23 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Remember me tokens table
-CREATE TABLE IF NOT EXISTS remember_me_tokens (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+-- Remember me tokens
+CREATE TABLE remember_me_tokens (
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
-    token VARCHAR(64) NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_token (token),
-    INDEX idx_expires (expires_at),
-    INDEX idx_user_id (user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
--- Ingredients table
+CREATE INDEX idx_token ON remember_me_tokens(token);
+CREATE INDEX idx_expires ON remember_me_tokens(expires_at);
+CREATE INDEX idx_user_id ON remember_me_tokens(user_id);
+
+-- Ingredients
 CREATE TABLE ingredients (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
     category VARCHAR(50),
@@ -36,13 +33,14 @@ CREATE TABLE ingredients (
     notes TEXT,
     expiration_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_barcode (barcode)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Recipes table (updated with all columns)
+CREATE INDEX idx_barcode ON ingredients(barcode);
+
+-- Recipes
 CREATE TABLE recipes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     title VARCHAR(200) NOT NULL,
     description TEXT,
@@ -56,44 +54,48 @@ CREATE TABLE recipes (
     source_id VARCHAR(100),
     image_url VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_category (category),
-    INDEX idx_source (source)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Recipe ingredients table
+CREATE INDEX idx_category ON recipes(category);
+CREATE INDEX idx_source ON recipes(source);
+
+-- Recipe ingredients
 CREATE TABLE recipe_ingredients (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     recipe_id INT NOT NULL,
     ingredient_name VARCHAR(100) NOT NULL,
     quantity VARCHAR(50),
     FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
 );
 
--- Meal plans table
+-- ENUM for meal types
+CREATE TYPE meal_type_enum AS ENUM ('breakfast','lunch','dinner','snack');
+
+-- Meal plans
 CREATE TABLE meal_plans (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     date DATE NOT NULL,
-    meal_type ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL,
+    meal_type meal_type_enum NOT NULL,
     recipe_id INT,
     custom_meal VARCHAR(200),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE SET NULL
 );
 
--- Grocery lists table
+-- Grocery lists
 CREATE TABLE grocery_lists (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     name VARCHAR(200) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Grocery list items table
+-- Grocery items
 CREATE TABLE grocery_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     list_id INT NOT NULL,
     item_name VARCHAR(100) NOT NULL,
     quantity VARCHAR(50),
@@ -102,54 +104,56 @@ CREATE TABLE grocery_items (
     FOREIGN KEY (list_id) REFERENCES grocery_lists(id) ON DELETE CASCADE
 );
 
--- Scanned products (global product database)
+-- Scanned products
 CREATE TABLE scanned_products (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     barcode VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     category VARCHAR(100),
     brand VARCHAR(100),
     default_quantity VARCHAR(50),
     image_url VARCHAR(500),
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_barcode (barcode),
-    INDEX idx_category (category)
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- User scan history (track what users have scanned)
+CREATE INDEX idx_scanned_barcode ON scanned_products(barcode);
+CREATE INDEX idx_scanned_category ON scanned_products(category);
+
+-- User scans
 CREATE TABLE user_scans (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     barcode VARCHAR(50),
     product_id INT,
     scan_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     added_to_kitchen BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES scanned_products(id) ON DELETE SET NULL,
-    INDEX idx_user_scan (user_id, scan_date)
+    FOREIGN KEY (product_id) REFERENCES scanned_products(id) ON DELETE SET NULL
 );
 
--- Product categories for better organization
+CREATE INDEX idx_user_scan ON user_scans(user_id, scan_date);
+
+-- Product categories
 CREATE TABLE product_categories (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
     icon VARCHAR(50)
 );
 
--- Insert some common categories
 INSERT INTO product_categories (name, icon) VALUES
-('Vegetables', 'fa-carrot'),
-('Fruits', 'fa-apple-alt'),
-('Meat', 'fa-drumstick-bite'),
-('Dairy', 'fa-cheese'),
-('Grains', 'fa-bread-slice'),
-('Spices', 'fa-mortar-pestle'),
-('Canned Goods', 'fa-can'),
-('Frozen Foods', 'fa-ice-cream'),
-('Beverages', 'fa-wine-bottle'),
-('Snacks', 'fa-cookie'),
-('Baking', 'fa-egg'),
-('Condiments', 'fa-jar'),
-('Other', 'fa-box');
+('Vegetables','fa-carrot'),
+('Fruits','fa-apple-alt'),
+('Meat','fa-drumstick-bite'),
+('Dairy','fa-cheese'),
+('Grains','fa-bread-slice'),
+('Spices','fa-mortar-pestle'),
+('Canned Goods','fa-can'),
+('Frozen Foods','fa-ice-cream'),
+('Beverages','fa-wine-bottle'),
+('Snacks','fa-cookie'),
+('Baking','fa-egg'),
+('Condiments','fa-jar'),
+('Other','fa-box');
+
