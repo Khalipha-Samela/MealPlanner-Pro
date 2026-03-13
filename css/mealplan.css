@@ -1142,6 +1142,12 @@
 }
 
 @media (max-width: 768px) {
+    .header-actions {
+        flex-direction: column;
+        gap: var(--space-2);
+        width: 100%;
+    }
+    
     .stats-grid {
         grid-template-columns: 1fr;
     }
@@ -1235,7 +1241,7 @@
         gap: var(--space-2);
         width: 100%;
     }
-    
+
     .stat-card {
         padding: var(--space-4);
     }
