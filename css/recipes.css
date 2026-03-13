@@ -789,6 +789,285 @@
     background: var(--primary-dark);
 }
 
+/* Modal Fixes */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 5vh auto;
+    padding: 0;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    animation: slideUp 0.3s ease;
+    border: 1px solid var(--gray-200);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.modal-lg {
+    max-width: 800px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--gray-200);
+    background: linear-gradient(to right, var(--gray-50), white);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-header h2 i {
+    color: var(--primary);
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--gray-500);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background-color: var(--gray-100);
+    color: var(--gray-700);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--gray-200);
+    background-color: var(--gray-50);
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+.footer-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Form Styles for Modal */
+.form-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+}
+
+.form-group .required {
+    color: var(--danger);
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background-color: white;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+textarea.form-input {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+/* Ingredients Section */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.ingredients-container {
+    margin-bottom: 15px;
+}
+
+.ingredient-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 40px;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: start;
+}
+
+.ingredient-row .form-group {
+    margin: 0;
+}
+
+.ingredient-row .form-input {
+    height: 38px;
+}
+
+.ingredient-row .action-group {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-icon.delete:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.ingredient-tip, .instruction-tip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--gray-50);
+    border-radius: var(--radius);
+    color: var(--gray-600);
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .modal-content.modal-lg {
+        max-width: 100%;
+    }
+    
+    .modal-header {
+        padding: 16px 20px;
+    }
+    
+    .modal-body {
+        padding: 16px;
+    }
+    
+    .modal-footer {
+        padding: 16px 20px;
+    }
+    
+    .ingredient-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .footer-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .footer-actions .btn {
+        width: 100%;
+    }
+}
+
 /* Form Sections */
 .form-section {
     background: white;
