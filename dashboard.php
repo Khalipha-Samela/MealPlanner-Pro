@@ -38,6 +38,7 @@ $stmt = $pdo->prepare("SELECT mp.*, r.title FROM meal_plans mp
                           WHEN 'breakfast' THEN 1 
                           WHEN 'lunch' THEN 2 
                           WHEN 'dinner' THEN 3 
+                          WHEN 'snack' THEN 4
                           ELSE 4 
                       END");
 $stmt->execute([$user_id, $today]);
