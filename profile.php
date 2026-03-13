@@ -88,7 +88,7 @@ $stmt = $pdo->prepare("SELECT
     (SELECT COUNT(*) FROM ingredients WHERE user_id = ?) as ingredient_count,
     (SELECT COUNT(*) FROM recipes WHERE user_id = ?) as recipe_count,
     (SELECT COUNT(*) FROM meal_plans WHERE user_id = ?) as total_meals,
-    (SELECT COUNT(*) FROM meal_plans WHERE user_id = ? AND date >= CURDATE()) as upcoming_meals,
+    (SELECT COUNT(*) FROM meal_plans WHERE user_id = ? AND date >= CURRENT_DATE) as upcoming_meals,
     (SELECT COUNT(DISTINCT DATE(date)) FROM meal_plans WHERE user_id = ?) as days_planned,
     (SELECT COUNT(*) FROM grocery_lists WHERE user_id = ?) as grocery_lists");
 $stmt->execute([$user_id, $user_id, $user_id, $user_id, $user_id, $user_id]);
