@@ -851,3 +851,331 @@ body {
 .text-muted {
     color: var(--gray-500);
 }
+
+/* ====================================
+   Recipe Suggestions with Add to Recipes
+   ==================================== */
+.suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.suggestion-card {
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    border: 1px solid transparent;
+    transition: var(--transition-all);
+}
+
+.suggestion-card:hover {
+    background: white;
+    border-color: var(--primary-border);
+    box-shadow: var(--shadow);
+}
+
+.suggestion-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.suggestion-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-bg);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.suggestion-info {
+    flex: 1;
+}
+
+.suggestion-name {
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--space-1);
+    text-transform: capitalize;
+}
+
+.suggestion-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+}
+
+.suggestion-meta i {
+    margin-right: 2px;
+    color: var(--primary);
+}
+
+.suggestion-actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.suggestion-actions .btn {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+}
+
+/* Recipe Modal */
+.recipe-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: modalSlideUp 0.3s ease;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+}
+
+.modal-header h3 {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.modal-close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-all);
+}
+
+.modal-close:hover {
+    background: var(--primary-bg);
+    color: var(--primary);
+}
+
+.modal-body {
+    padding: var(--space-6);
+}
+
+.modal-footer {
+    padding: var(--space-5) var(--space-6);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+
+/* Recipe Details in Modal */
+.recipe-details .recipe-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.recipe-details .recipe-meta span {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+}
+
+.recipe-section {
+    margin-bottom: var(--space-5);
+}
+
+.recipe-section h4 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--space-3);
+}
+
+.recipe-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.recipe-section li {
+    padding: var(--space-2) 0;
+    color: var(--gray-700);
+    border-bottom: 1px dashed var(--gray-200);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.recipe-section li:before {
+    content: "•";
+    color: var(--primary);
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.recipe-section p {
+    color: var(--gray-700);
+    line-height: 1.8;
+    white-space: pre-line;
+}
+
+/* Notification */
+.dashboard-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-6);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    z-index: 2000;
+    transform: translateX(400px);
+    transition: transform 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.dashboard-notification.show {
+    transform: translateX(0);
+}
+
+.dashboard-notification.success {
+    border-left-color: var(--primary);
+}
+
+.dashboard-notification.success i {
+    color: var(--primary);
+}
+
+.dashboard-notification.error {
+    border-left-color: var(--danger);
+}
+
+.dashboard-notification.error i {
+    color: var(--danger);
+}
+
+.dashboard-notification i {
+    font-size: var(--text-xl);
+}
+
+.dashboard-notification span {
+    color: var(--gray-800);
+    font-weight: 500;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .suggestion-actions {
+        flex-direction: column;
+    }
+    
+    .modal-content {
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .modal-header {
+        padding: var(--space-4);
+    }
+    
+    .modal-body {
+        padding: var(--space-4);
+    }
+    
+    .modal-footer {
+        padding: var(--space-4);
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .dashboard-notification {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        transform: translateY(400px);
+    }
+    
+    .dashboard-notification.show {
+        transform: translateY(0);
+    }
+}
+
+/* Button Success State */
+.btn-success {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
+}
+
+.btn-success:hover {
+    background-color: var(--primary-dark) !important;
+}
