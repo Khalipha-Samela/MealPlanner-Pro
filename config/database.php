@@ -1,5 +1,5 @@
 <?php
-$host = "db.xhfrlzamhwntvlvlhzpm.supabase.com";
+$host = "db.xhfrlzamhwntvlvlhzpm.supabase.co";
 $port = "5432";
 $dbname = "postgres";
 $username = "postgres";
