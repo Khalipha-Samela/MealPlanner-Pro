@@ -643,7 +643,7 @@ $cooked_count = count($used_recipe_ids);
                                                       (SELECT COUNT(*) FROM recipe_ingredients WHERE recipe_id = r.id) as ingredient_count
                                                       FROM recipes r 
                                                       WHERE r.user_id = ? 
-                                                      ORDER BY RAND() 
+                                                      ORDER BY RANDOM() 
                                                       LIMIT 3");
                                 $stmt->execute([$user_id]);
                                 $suggested = $stmt->fetchAll(PDO::FETCH_ASSOC);
