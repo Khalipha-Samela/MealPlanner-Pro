@@ -24,7 +24,7 @@ $recipe_count = $stmt->fetchColumn();
 // Get upcoming expiring ingredients
 $stmt = $pdo->prepare("SELECT name, expiration_date FROM ingredients 
                       WHERE user_id = ? AND expiration_date IS NOT NULL 
-                      AND expiration_date >= CURDATE() 
+                      AND expiration_date >= CURRENT_DATE
                       ORDER BY expiration_date ASC LIMIT 5");
 $stmt->execute([$user_id]);
 $expiring_ingredients = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -34,7 +34,12 @@ $today = date('Y-m-d');
 $stmt = $pdo->prepare("SELECT mp.*, r.title FROM meal_plans mp 
                       LEFT JOIN recipes r ON mp.recipe_id = r.id 
                       WHERE mp.user_id = ? AND mp.date = ? 
-                      ORDER BY FIELD(mp.meal_type, 'breakfast', 'lunch', 'dinner', 'snack')");
+                      ORDER BY CASE mp.meal_type 
+                          WHEN 'breakfast' THEN 1 
+                          WHEN 'lunch' THEN 2 
+                          WHEN 'dinner' THEN 3 
+                          ELSE 4 
+                      END");
 $stmt->execute([$user_id, $today]);
 $today_meals = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
