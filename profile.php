@@ -339,7 +339,7 @@ $recent_activity = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <i class="fas fa-leaf"></i>
                                         <textarea id="dietary_preferences" name="dietary_preferences" rows="3"
                                                   placeholder="e.g., Vegetarian, Gluten-Free, Nut Allergies, etc."
-                                                  class="form-input"><?php echo htmlspecialchars($user['dietary_preferences']); ?></textarea>
+                                                  class="form-input"><?php echo htmlspecialchars($user['dietary_preferences'] ?? ''); ?></textarea>
                                     </div>
                                 </div>
                                 
