@@ -1,8 +1,9 @@
 <?php
-$host = "db.xhfrlzamhwntvlvlhzpm.supabase.co";
-$port = "5432";
+
+$host = "aws-0-eu-west-1.pooler.supabase.com";
+$port = "6543";
 $dbname = "postgres";
-$username = "postgres";
+$username = "postgres.xhfrlzamhwntvlvlhzpm";
 $password = "Qu74pqPtLRf,Wa@";
 
 try {
@@ -17,4 +18,3 @@ try {
 } catch(PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
-?>
