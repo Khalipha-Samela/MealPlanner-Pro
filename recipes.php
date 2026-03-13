@@ -30,11 +30,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
                 
-                // Check if category column exists
-                $stmt = $pdo->query("SHOW COLUMNS FROM recipes LIKE 'category'");
+                // Check if category column exists (PostgreSQL)
+                $stmt = $pdo->prepare("
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'recipes' AND column_name = 'category'
+                ");
+                $stmt->execute();
                 $category_exists = $stmt->fetch();
-                
-                $stmt = $pdo->query("SHOW COLUMNS FROM recipes LIKE 'difficulty'");
+
+                // Check if difficulty column exists (PostgreSQL)
+                $stmt = $pdo->prepare("
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'recipes' AND column_name = 'difficulty'
+                ");
+                $stmt->execute();
                 $difficulty_exists = $stmt->fetch();
                 
                 // Build query dynamically based on existing columns
