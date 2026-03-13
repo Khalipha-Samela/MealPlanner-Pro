@@ -15,6 +15,7 @@ $error = '';
 // Get current week dates
 $week_start = isset($_GET['week']) ? $_GET['week'] : date('Y-m-d');
 $week_start = date('Y-m-d', strtotime('monday this week', strtotime($week_start)));
+
 $week_dates = [];
 for ($i = 0; $i < 7; $i++) {
     $week_dates[] = date('Y-m-d', strtotime($week_start . " +$i days"));
@@ -22,18 +23,22 @@ for ($i = 0; $i < 7; $i++) {
 
 // Get meal plan for the week
 $meal_plans = [];
-$stmt = $pdo->prepare("SELECT mp.*, r.title as recipe_title, r.prep_time, r.cook_time, r.category, r.image_url
-                      FROM meal_plans mp 
-                      LEFT JOIN recipes r ON mp.recipe_id = r.id 
-                      WHERE mp.user_id = ? AND mp.date BETWEEN ? AND ? 
-                      ORDER BY mp.date, 
-                               CASE mp.meal_type 
-                                   WHEN 'breakfast' THEN 1 
-                                   WHEN 'lunch' THEN 2 
-                                   WHEN 'dinner' THEN 3 
-                                   WHEN 'snack' THEN 4 
-                                   ELSE 5 
-                               END");
+
+$stmt = $pdo->prepare("
+    SELECT mp.*, r.title as recipe_title, r.prep_time, r.cook_time, r.category, r.image_url
+    FROM meal_plans mp 
+    LEFT JOIN recipes r ON mp.recipe_id = r.id 
+    WHERE mp.user_id = ? AND mp.date BETWEEN ? AND ? 
+    ORDER BY mp.date,
+    CASE mp.meal_type
+        WHEN 'breakfast' THEN 1
+        WHEN 'lunch' THEN 2
+        WHEN 'dinner' THEN 3
+        WHEN 'snack' THEN 4
+        ELSE 5
+    END
+");
+
 $stmt->execute([$user_id, $week_dates[0], $week_dates[6]]);
 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -43,47 +48,73 @@ foreach ($results as $plan) {
 
 // Add meal to plan
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_meal'])) {
+
     $date = $_POST['date'];
     $meal_type = $_POST['meal_type'];
     $recipe_id = !empty($_POST['recipe_id']) ? $_POST['recipe_id'] : null;
     $custom_meal = trim($_POST['custom_meal']) ?: null;
-    
+
     if (!$recipe_id && !$custom_meal) {
         $error = 'Please select a recipe or enter a custom meal';
     } else {
+
         try {
-            // Check if meal already exists for this time
-            $stmt = $pdo->prepare("SELECT id FROM meal_plans 
-                                  WHERE user_id = ? AND date = ? AND meal_type = ?");
+
+            $stmt = $pdo->prepare("
+                SELECT id FROM meal_plans 
+                WHERE user_id = ? AND date = ? AND meal_type = ?
+            ");
+
             $stmt->execute([$user_id, $date, $meal_type]);
-            
-            if ($stmt->rowCount() > 0) {
-                // Update existing meal
-                $stmt = $pdo->prepare("UPDATE meal_plans 
-                                      SET recipe_id = ?, custom_meal = ? 
-                                      WHERE user_id = ? AND date = ? AND meal_type = ?");
+
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+
+                $stmt = $pdo->prepare("
+                    UPDATE meal_plans 
+                    SET recipe_id = ?, custom_meal = ?
+                    WHERE user_id = ? AND date = ? AND meal_type = ?
+                ");
+
                 $stmt->execute([$recipe_id, $custom_meal, $user_id, $date, $meal_type]);
+
                 $message = 'Meal updated successfully!';
+
             } else {
-                // Insert new meal
-                $stmt = $pdo->prepare("INSERT INTO meal_plans (user_id, date, meal_type, recipe_id, custom_meal) 
-                                      VALUES (?, ?, ?, ?, ?)");
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO meal_plans (user_id, date, meal_type, recipe_id, custom_meal)
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+
                 $stmt->execute([$user_id, $date, $meal_type, $recipe_id, $custom_meal]);
+
                 $message = 'Meal added to plan!';
             }
+
         } catch(PDOException $e) {
             $error = 'Failed to add meal: ' . $e->getMessage();
         }
     }
 }
 
-// Remove meal from plan
+// Remove meal
 if (isset($_GET['remove'])) {
+
     $meal_id = $_GET['remove'];
+
     try {
-        $stmt = $pdo->prepare("DELETE FROM meal_plans WHERE id = ? AND user_id = ?");
+
+        $stmt = $pdo->prepare("
+            DELETE FROM meal_plans 
+            WHERE id = ? AND user_id = ?
+        ");
+
         $stmt->execute([$meal_id, $user_id]);
+
         $message = 'Meal removed from plan!';
+
     } catch(PDOException $e) {
         $error = 'Failed to remove meal: ' . $e->getMessage();
     }
@@ -91,61 +122,91 @@ if (isset($_GET['remove'])) {
 
 // Generate meal plan from kitchen ingredients
 if (isset($_GET['generate'])) {
-    // Get user's ingredients
-    $stmt = $pdo->prepare("SELECT name FROM ingredients WHERE user_id = ?");
+
+    $stmt = $pdo->prepare("
+        SELECT name FROM ingredients 
+        WHERE user_id = ?
+    ");
+
     $stmt->execute([$user_id]);
+
     $user_ingredients = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    // Find recipes that use these ingredients
+
     if (!empty($user_ingredients)) {
-        $placeholders = str_repeat('?,', count($user_ingredients) - 1) . '?';
-        $stmt = $pdo->prepare("SELECT DISTINCT r.* FROM recipes r 
-                              JOIN recipe_ingredients ri ON r.id = ri.recipe_id 
-                              WHERE r.user_id = ? AND ri.ingredient_name IN ($placeholders)
-                              LIMIT 10");
+
+        $placeholders = implode(',', array_fill(0, count($user_ingredients), '?'));
+
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT r.*
+            FROM recipes r
+            JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+            WHERE r.user_id = ?
+            AND ri.ingredient_name IN ($placeholders)
+            LIMIT 10
+        ");
+
         $params = array_merge([$user_id], $user_ingredients);
+
         $stmt->execute($params);
+
         $suggested_recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Auto-assign to empty slots
-        $meal_types = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+        $meal_types = ['breakfast','lunch','dinner','snack'];
+
         $count = 0;
-        
+
         foreach ($week_dates as $date) {
+
             foreach ($meal_types as $meal_type) {
+
                 if (!isset($meal_plans[$date][$meal_type]) && $count < count($suggested_recipes)) {
+
                     $recipe = $suggested_recipes[$count];
-                    
-                    $stmt = $pdo->prepare("INSERT INTO meal_plans (user_id, date, meal_type, recipe_id) 
-                                          VALUES (?, ?, ?, ?)");
+
+                    $stmt = $pdo->prepare("
+                        INSERT INTO meal_plans (user_id, date, meal_type, recipe_id)
+                        VALUES (?, ?, ?, ?)
+                    ");
+
                     $stmt->execute([$user_id, $date, $meal_type, $recipe['id']]);
+
                     $count++;
-                    
-                    if ($count >= 7) break; // Limit to 7 suggestions
+
+                    if ($count >= 7) break;
                 }
             }
         }
-        
+
         $message = "Generated meal plan with $count recipes based on your kitchen!";
+
         header('Location: mealplan.php?week=' . $week_start);
         exit();
+
     } else {
-        $error = 'Add some ingredients to your kitchen first to generate meal plans!';
+
+        $error = 'Add ingredients to your kitchen first!';
     }
 }
 
-// Get user's recipes for dropdown
-$stmt = $pdo->prepare("SELECT id, title, category, prep_time, cook_time FROM recipes WHERE user_id = ? ORDER BY title");
+// Get recipes for dropdown
+$stmt = $pdo->prepare("
+    SELECT id, title, category, prep_time, cook_time
+    FROM recipes
+    WHERE user_id = ?
+    ORDER BY title
+");
+
 $stmt->execute([$user_id]);
+
 $recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get quick stats
+// Quick stats
 $total_meals = count($results);
 $total_time = calculateTotalTime($results, $pdo);
 $unique_ingredients = count(getWeeklyIngredients($results, $pdo));
 $planned_days = count(array_unique(array_column($results, 'date')));
 
-// Get recipes used this week
+// Recipes used
 $used_recipe_ids = array_filter(array_column($results, 'recipe_id'));
 $cooked_count = count($used_recipe_ids);
 ?>
