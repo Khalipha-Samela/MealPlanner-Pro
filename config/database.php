@@ -1,8 +1,8 @@
 <?php
-$host = 'localhost';
-$dbname = 'mealplanner';
-$username = 'root';
-$password = '';
+$host = 'db.xhfrlzamhwntvlvlhzpm.supabase.co';
+$dbname = 'postgres';
+$username = 'postgres';
+$password = 'Qu74pqPtLRf,Wa@';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
