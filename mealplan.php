@@ -639,12 +639,15 @@ $cooked_count = count($used_recipe_ids);
                             <div class="suggestions-list" id="suggestionsList">
                                 <?php
                                 // Get random recipes for suggestions
-                                $stmt = $pdo->prepare("SELECT r.*, 
-                                                      (SELECT COUNT(*) FROM recipe_ingredients WHERE recipe_id = r.id) as ingredient_count
-                                                      FROM recipes r 
-                                                      WHERE r.user_id = ? 
-                                                      ORDER BY RANDOM() 
-                                                      LIMIT 3");
+                                $stmt = $pdo->prepare("
+                                        SELECT r.*, COUNT(ri.id) AS ingredient_count
+                                        FROM recipes r
+                                        LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+                                        WHERE r.user_id = ?
+                                        GROUP BY r.id
+                                        ORDER BY RANDOM()
+                                        LIMIT 3
+                                ");
                                 $stmt->execute([$user_id]);
                                 $suggested = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 ?>
